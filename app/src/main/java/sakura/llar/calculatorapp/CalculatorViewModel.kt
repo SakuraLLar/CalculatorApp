@@ -1,5 +1,6 @@
 package sakura.llar.calculatorapp
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
@@ -15,54 +16,97 @@ class CalculatorViewModel : ViewModel() {
     val resultText: LiveData<String> = _resultText
 
     fun onButtonClick(btn: String) {
-
-        _equationText.value?.let {
-            when (btn) {
-                "AC" -> {
-                    _equationText.value = ""
-                    _resultText.value = ""
-                }
-
-                "C" -> {
-                    if (it.isNotEmpty()) {
-                        _equationText.value =
-                            it.substring(0, it.length - 1)
+        if ((equationText.value?.length ?: 0) < 15 || btn in listOf(
+                "C", "AC", "(", ")", "÷", "×", "-", "+", "=", ",", "."
+            )
+        ) {
+            _equationText.value?.let {
+                when (btn) {
+                    "AC" -> {
+                        _equationText.value = ""
+                        _resultText.value = ""
                     }
-                }
 
-                "=" -> {
-                    _equationText.value = _resultText.value
-                }
+                    "C" -> {
+                        if (it.isNotEmpty()) {
+                            _equationText.value =
+                                it.substring(0, it.length - 1)
+                            calculate()
+                        }
+                    }
 
-                else -> {
-                    _equationText.value = it + btn
-                    try {
-                        _resultText.value = calculatorResult(_equationText.value.toString())
-                    } catch (_: Exception) {
-                        // Error handling.
+                    "=" -> {
+                        val equationWithDot =
+                            _equationText.value.toString().replace(",", ".")
+                        try {
+                            _resultText.value =
+                                calculatorResult(equationWithDot).replace('.', ',')
+                        } catch (_: Exception) {
+                            // Error handling.
+                        }
+                        _equationText.value =
+                            _resultText.value
+                    }
+
+                    "," -> {
+                        _equationText.value =
+                            it + ","
+                        calculateWithComma()
+                    }
+
+                    else -> {
+                        _equationText.value = it + btn
+                        calculate()
                     }
                 }
             }
         }
     }
-}
 
-fun calculatorResult(equation: String): String {
-
-    val modifiedEquation = equation.replace("×", "*").replace("÷", "/")
-
-    val context: Context = Context.enter()
-    context.optimizationLevel = -1
-
-    val scriptable: Scriptable = context.initStandardObjects()
-    var finalResult =
-        context.evaluateString(scriptable, modifiedEquation, "Javascript", 1, null).toString()
-
-    if (finalResult.endsWith(".0")) {
-        finalResult = finalResult.replace(".0", "")
+    private fun calculate() {
+        try {
+            val equationWithDot =
+                _equationText.value.toString().replace(",", ".")
+            _resultText.value =
+                calculatorResult(equationWithDot).replace('.', ',')
+        } catch (_: Exception) {
+            // Error handling.
+        }
     }
 
-    finalResult = finalResult.replace('.', ',')
+    private fun calculateWithComma() {
+        try {
+            val equationWithDot =
+                _equationText.value.toString().replace(",", ".")
 
-    return finalResult
+            _resultText.value =
+                calculatorResult(equationWithDot).replace('.', ',')
+        } catch (_: Exception) {
+            // Error handling.
+        }
+    }
+
+    fun calculatorResult(equation: String): String {
+
+        val modifiedEquation =
+            equation.replace("×", "*").replace("÷", "/")
+
+        val context: Context = Context.enter()
+        context.optimizationLevel = -1
+
+        val scriptable: Scriptable = context.initStandardObjects()
+
+        var finalResult =
+            context.evaluateString(scriptable,
+                modifiedEquation,
+                "Javascript",
+                1,
+                null).toString()
+
+        if (finalResult.endsWith(".0")) {
+            finalResult = finalResult.replace(".0", "")
+        }
+
+        return finalResult
+    }
 }
