@@ -33,7 +33,6 @@ val buttonList = listOf(
     "AC", "0", ",", "="
 )
 
-// ×, ÷
 @Composable
 fun Calculator(modifier: Modifier = Modifier, viewModel: CalculatorViewModel) {
 
